@@ -82,9 +82,6 @@ Install required packages:
 
 ```bash
 pip install qrcode pillow pyperclip
-```
-
----
 
 ## ▶️ Run a Project
 
@@ -105,6 +102,8 @@ or
 ```bash
 python qr.py
 
+
+
 ## 📈 Future Improvements
 
 - More Python GUI projects
@@ -112,8 +111,6 @@ python qr.py
 - Dark and Light themes
 - Additional utility applications
 - New beginner-friendly projects
-
----
 
 ## 🤝 Contributing
 
