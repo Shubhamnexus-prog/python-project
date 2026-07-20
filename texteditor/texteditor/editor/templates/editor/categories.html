@@ -1,0 +1,39 @@
+{% extends "editor/base.html" %}
+{% block title %}Categories · Inkwell{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Categories</h1>
+    <p class="page-subtitle">Organize your documents by topic.</p>
+  </div>
+</div>
+
+<form method="post" style="display:flex; gap:10px; align-items:flex-end; max-width:480px; margin-bottom:12px;">
+  {% csrf_token %}
+  <div class="form-row" style="flex:1; margin-bottom:0;">
+    <label for="id_name">Name</label>
+    {{ form.name }}
+  </div>
+  <div class="form-row" style="margin-bottom:0;">
+    <label for="id_color">Color</label>
+    {{ form.color }}
+  </div>
+  <button type="submit" class="btn btn-primary">Add</button>
+</form>
+
+<div class="category-list">
+  {% for c in categories %}
+  <div class="category-row">
+    <span class="category-dot" style="background:{{ c.color }};"></span>
+    <span class="name">{{ c.name }}</span>
+    <span style="color:var(--ink-soft); font-size:12.5px;">{{ c.documents.count }} doc{{ c.documents.count|pluralize }}</span>
+    <form method="post" action="{% url 'editor:category_delete' c.id %}" onsubmit="return confirm('Delete this category? Documents will keep their content but lose this label.');">
+      {% csrf_token %}
+      <button type="submit" class="link-btn" style="color:var(--danger);">Delete</button>
+    </form>
+  </div>
+  {% empty %}
+  <div class="empty-state"><span class="glyph">&#127991;</span><p>No categories yet.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

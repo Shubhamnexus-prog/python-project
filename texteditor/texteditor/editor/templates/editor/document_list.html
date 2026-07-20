@@ -1,0 +1,116 @@
+{% extends "editor/base.html" %}
+{% block title %}
+{% if filter_mode == 'trash' %}Trash{% elif filter_mode == 'favorites' %}Favorites{% else %}All documents{% endif %} · Inkwell
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">
+      {% if filter_mode == 'trash' %}Trash
+      {% elif filter_mode == 'favorites' %}Favorites
+      {% else %}All documents{% endif %}
+    </h1>
+    <p class="page-subtitle">{{ page_obj.paginator.count }} document{{ page_obj.paginator.count|pluralize }}</p>
+  </div>
+  {% if filter_mode != 'trash' %}
+  <form method="post" action="{% url 'editor:document_create' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary">+ New document</button>
+  </form>
+  {% endif %}
+</div>
+
+<form method="get" class="toolbar">
+  {% if filter_mode %}<input type="hidden" name="filter" value="{{ filter_mode }}">{% endif %}
+  <input type="text" name="q" value="{{ q }}" placeholder="Search title or content&hellip;" class="search-input">
+  <select name="category" class="filter-select" onchange="this.form.submit()">
+    <option value="">All categories</option>
+    {% for c in categories %}
+      <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="tag" class="filter-select" onchange="this.form.submit()">
+    <option value="">All tags</option>
+    {% for t in tags %}
+      <option value="{{ t.id }}" {% if selected_tag == t.id|stringformat:'s' %}selected{% endif %}>#{{ t.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-sm">Search</button>
+</form>
+
+{% if page_obj.object_list %}
+<div class="doc-grid">
+  {% for doc in page_obj %}
+  <div class="doc-card" style="--card-accent: {% if doc.category %}{{ doc.category.color }}{% else %}var(--rule){% endif %};">
+    {% if filter_mode != 'trash' %}
+    <button class="fav-btn {% if doc.is_favorite %}is-fav{% endif %}" data-doc-id="{{ doc.id }}" title="Toggle favorite">&#9733;</button>
+    {% endif %}
+    <a href="{% url 'editor:document_edit' doc.id %}">
+      <span class="doc-card-title">{{ doc.title }}</span>
+    </a>
+    <div class="doc-card-snippet">{{ doc.content|striptags|truncatewords:28|default:"No content yet." }}</div>
+    {% if doc.tags.all %}
+    <div class="doc-card-tags">
+      {% for tag in doc.tags.all %}<span class="tag-chip">#{{ tag.name }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    <div class="doc-card-meta">
+      <span>{{ doc.word_count }} words</span>
+      <span>{{ doc.updated_at|date:"M j, Y" }}</span>
+    </div>
+    <div class="doc-card-actions">
+      {% if filter_mode == 'trash' %}
+        <form method="post" action="{% url 'editor:document_restore' doc.id %}">
+          {% csrf_token %}<button class="btn btn-sm" type="submit">Restore</button>
+        </form>
+        <form method="post" action="{% url 'editor:document_delete_forever' doc.id %}" onsubmit="return confirm('Permanently delete this document? This cannot be undone.');">
+          {% csrf_token %}<button class="btn btn-sm btn-danger" type="submit">Delete forever</button>
+        </form>
+      {% else %}
+        <form method="post" action="{% url 'editor:document_trash' doc.id %}">
+          {% csrf_token %}<button class="btn btn-sm btn-danger" type="submit">Move to trash</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+  {% if page_obj.has_previous %}<a class="btn btn-sm" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if filter_mode %}&filter={{ filter_mode }}{% endif %}">&larr; Prev</a>{% endif %}
+  <span class="btn btn-sm" style="cursor:default;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="btn btn-sm" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if filter_mode %}&filter={{ filter_mode }}{% endif %}">Next &rarr;</a>{% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+  <span class="glyph">&#10022;</span>
+  {% if filter_mode == 'trash' %}
+    <p>Trash is empty.</p>
+  {% elif q %}
+    <p>No documents match "{{ q }}".</p>
+  {% else %}
+    <p>No documents yet &mdash; start your first one.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.fav-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    const id = btn.dataset.docId;
+    fetch(`/doc/${id}/favorite/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': getCsrfToken()},
+    }).then(r => r.json()).then(data => {
+      btn.classList.toggle('is-fav', data.is_favorite);
+    });
+  });
+});
+function getCsrfToken() {
+  return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+}
+</script>
+{% endblock %}

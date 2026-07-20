@@ -1,0 +1,155 @@
+{% extends "editor/base.html" %}
+{% block title %}{{ doc.title }} · Inkwell{% endblock %}
+{% block content %}
+<div class="editor-header">
+  <input type="text" id="doc-title" class="title-input" value="{{ doc.title }}" placeholder="Untitled Document">
+  <div class="editor-actions">
+    <a href="{% url 'editor:document_versions' doc.id %}" class="btn btn-sm">History</a>
+    <a href="{% url 'editor:document_export_txt' doc.id %}" class="btn btn-sm">Export .txt</a>
+    <a href="{% url 'editor:document_export_pdf' doc.id %}" class="btn btn-sm">Export .pdf</a>
+    <a href="{% url 'editor:document_list' %}" class="btn btn-sm">Done</a>
+  </div>
+</div>
+
+<div class="editor-meta-row">
+  <select id="doc-category">
+    <option value="">No category</option>
+    {% for c in categories %}
+      <option value="{{ c.id }}" {% if doc.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" id="doc-tags" class="tags-input" value="{{ tag_names }}" placeholder="tags, comma, separated">
+</div>
+
+<div class="editor-toolbar">
+  <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+  <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+  <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+  <span class="divider"></span>
+  <button type="button" data-cmd="formatBlock" data-value="H1" title="Heading 1">H1</button>
+  <button type="button" data-cmd="formatBlock" data-value="H2" title="Heading 2">H2</button>
+  <button type="button" data-cmd="formatBlock" data-value="P" title="Paragraph">P</button>
+  <span class="divider"></span>
+  <button type="button" data-cmd="insertUnorderedList" title="Bullet list">&#8226; List</button>
+  <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+  <button type="button" data-cmd="formatBlock" data-value="BLOCKQUOTE" title="Quote">&#10077;</button>
+  <span class="divider"></span>
+  <button type="button" data-cmd="justifyLeft" title="Align left">&#8676;</button>
+  <button type="button" data-cmd="justifyCenter" title="Align center">&#8596;</button>
+  <button type="button" data-cmd="justifyRight" title="Align right">&#8677;</button>
+  <span class="divider"></span>
+  <button type="button" data-cmd="undo" title="Undo">&#8630;</button>
+  <button type="button" data-cmd="redo" title="Redo">&#8631;</button>
+</div>
+<div id="editor-surface" class="editor-surface" contenteditable="true">{{ doc.content|safe }}</div>
+
+<div class="status-bar">
+  <div class="saved-indicator"><span class="dot" id="save-dot"></span><span id="save-status">All changes saved</span></div>
+  <div><span id="word-count">{{ doc.word_count }}</span> words &middot; <span id="char-count">{{ doc.char_count }}</span> characters</div>
+</div>
+
+<script>
+(function () {
+  const docId = {{ doc.id }};
+  const surface = document.getElementById('editor-surface');
+  const titleInput = document.getElementById('doc-title');
+  const categorySelect = document.getElementById('doc-category');
+  const tagsInput = document.getElementById('doc-tags');
+  const saveStatus = document.getElementById('save-status');
+  const saveDot = document.getElementById('save-dot');
+  const wordCountEl = document.getElementById('word-count');
+  const charCountEl = document.getElementById('char-count');
+
+  function getCsrfToken() {
+    return document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+  }
+
+  // Toolbar commands
+  document.querySelectorAll('.editor-toolbar button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      surface.focus();
+      const cmd = btn.dataset.cmd;
+      const value = btn.dataset.value || null;
+      document.execCommand(cmd, false, value);
+      scheduleSave(false);
+    });
+  });
+
+  let saveTimer = null;
+  let snapshotTimer = null;
+  let dirty = false;
+
+  function scheduleSave(isTyping) {
+    dirty = true;
+    saveStatus.textContent = 'Editing…';
+    saveDot.style.background = 'var(--danger)';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(doSave, 900);
+  }
+
+  function doSave(forceSnapshot) {
+    if (!dirty && !forceSnapshot) return;
+    const payload = {
+      title: titleInput.value,
+      content: surface.innerHTML,
+      category_id: categorySelect.value || null,
+      tags: tagsInput.value,
+      snapshot: !!forceSnapshot,
+    };
+    fetch(`/doc/${docId}/autosave/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCsrfToken(),
+      },
+      body: JSON.stringify(payload),
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        dirty = false;
+        saveStatus.textContent = 'Saved at ' + data.updated_at.split(' ').slice(-2).join(' ');
+        saveDot.style.background = 'var(--gold)';
+        wordCountEl.textContent = data.word_count;
+        charCountEl.textContent = data.char_count;
+      }
+    }).catch(() => {
+      saveStatus.textContent = 'Save failed — retrying…';
+    });
+  }
+
+  surface.addEventListener('input', function () { scheduleSave(true); });
+  titleInput.addEventListener('input', function () { scheduleSave(true); });
+  categorySelect.addEventListener('change', function () { doSave(false); });
+  tagsInput.addEventListener('input', function () { scheduleSave(true); });
+
+  // Take a version snapshot every 2 minutes of active editing
+  snapshotTimer = setInterval(function () { doSave(true); }, 120000);
+
+  // Save before leaving the page
+  window.addEventListener('beforeunload', function () {
+    if (dirty) {
+      navigator.sendBeacon(
+        `/doc/${docId}/autosave/`,
+        new Blob([JSON.stringify({
+          title: titleInput.value,
+          content: surface.innerHTML,
+          category_id: categorySelect.value || null,
+          tags: tagsInput.value,
+          snapshot: true,
+        })], {type: 'application/json'})
+      );
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { document.execCommand('bold'); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') { document.execCommand('italic'); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'u') { document.execCommand('underline'); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      doSave(true);
+    }
+  });
+})();
+</script>
+{% endblock %}

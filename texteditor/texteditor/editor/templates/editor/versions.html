@@ -1,0 +1,33 @@
+{% extends "editor/base.html" %}
+{% block title %}History · {{ doc.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Version history</h1>
+    <p class="page-subtitle">{{ doc.title }}</p>
+  </div>
+  <a href="{% url 'editor:document_edit' doc.id %}" class="btn btn-sm">&larr; Back to document</a>
+</div>
+
+{% if versions %}
+<div class="version-list">
+  {% for v in versions %}
+  <div class="version-row">
+    <div>
+      <div class="version-title">{{ v.title }}</div>
+      <div class="version-date">{{ v.created_at|date:"M j, Y — g:i A" }} &middot; {{ v.content|striptags|wordcount }} words</div>
+    </div>
+    <form method="post" action="{% url 'editor:document_version_restore' doc.id v.id %}" onsubmit="return confirm('Restore this version? Your current draft will be saved as a version first.');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm">Restore</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <span class="glyph">&#128337;</span>
+  <p>No saved versions yet. Snapshots are taken automatically as you edit.</p>
+</div>
+{% endif %}
+{% endblock %}

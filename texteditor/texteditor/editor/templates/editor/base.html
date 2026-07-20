@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Inkwell{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'editor/main.css' %}">
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+<div class="app-shell">
+  {% if user.is_authenticated %}
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">&#10009;</span>
+      <span class="brand-name">Inkwell</span>
+    </div>
+    <nav class="side-nav">
+      <a href="{% url 'editor:document_list' %}" class="{% if not filter_mode %}active{% endif %}">All documents</a>
+      <a href="{% url 'editor:document_list' %}?filter=favorites" class="{% if filter_mode == 'favorites' %}active{% endif %}">Favorites</a>
+      <a href="{% url 'editor:category_manage' %}">Categories</a>
+      <a href="{% url 'editor:document_list' %}?filter=trash" class="{% if filter_mode == 'trash' %}active{% endif %}">Trash</a>
+    </nav>
+    <div class="side-nav-footer">
+      <button id="theme-toggle" class="theme-toggle" type="button" title="Toggle dark mode">
+        <span class="sun">&#9728;</span><span class="moon">&#9790;</span>
+      </button>
+      <form method="post" action="{% url 'editor:logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="link-btn">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  {% endif %}
+
+  <main class="content">
+    {% if messages %}
+      <div class="flash-stack">
+        {% for message in messages %}
+          <div class="flash flash-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{% static 'editor/main.js' %}"></script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
