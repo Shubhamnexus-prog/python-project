@@ -12,7 +12,6 @@ This repository contains beginner to intermediate-level Python applications buil
 A secure password generator application that creates strong and random passwords.
 
 ### Features
-
 * Generate strong passwords
 * Custom password length
 * Include uppercase, lowercase, numbers & symbols
@@ -20,7 +19,6 @@ A secure password generator application that creates strong and random passwords
 * Copy password functionality
 
 ### Tech Stack
-
 * Python
 * Tkinter
 * Random Module
