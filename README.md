@@ -4,7 +4,6 @@ Welcome to my **Python Projects Repository**!
 This repository contains beginner to intermediate-level Python applications built using **Python, Tkinter, CustomTkinter, APIs, and other Python libraries**. These projects demonstrate GUI development, automation, and problem-solving skills.
 
 ---
-
 ## 📌 Projects Included
 
 ## 🔐 1. Password Generator
