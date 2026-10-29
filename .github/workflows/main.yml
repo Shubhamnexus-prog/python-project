@@ -9,16 +9,15 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
-    # Matrix का उपयोग करके यह आपके सभी प्रोजेक्ट्स को एक साथ रन करेगा
+
     strategy:
       matrix:
         project-dir: [
           'countdown timer',
-          'password Generator',
+          'password  Generator',
           'qr code genretor',
           'song lyrics Extractor',
-          'speak to word converter',
+          'speak to  word converter',
           'task-manager',
           'texteditor/texteditor'
         ]
@@ -33,7 +32,6 @@ jobs:
         python-version: '3.10'
 
     - name: Install dependencies
-      # यह कमांड हर फ़ोल्डर के अंदर जाकर उसकी requirements.txt इंस्टॉल करेगी
       run: |
         cd "${{ matrix.project-dir }}"
         python -m pip install --upgrade pip
@@ -41,11 +39,10 @@ jobs:
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
 
     - name: Run Tests
-      # यह कमांड हर फ़ोल्डर में जाकर टेस्ट रन करेगी (अगर pytest इंस्टॉल है)
       run: |
         cd "${{ matrix.project-dir }}"
         if pip show pytest > /dev/null; then
           pytest
         else
           echo "No pytest found in ${{ matrix.project-dir }}, skipping tests."
-        fi  
+        fi
