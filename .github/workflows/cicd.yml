@@ -1,0 +1,52 @@
+name: Python Multi-Project CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project-dir: [
+          "countdown timer",
+          "password Generator",
+          "qr code genretor",
+          "song lyrics Extractor",
+          "speak to word converter",
+          "task-manager",
+          "texteditor/texteditor"
+        ]
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        cd "${{ matrix.project-dir }}"
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then 
+          pip install -r requirements.txt
+        else
+          echo "No requirements.txt found, skipping."
+        fi
+
+    - name: Run Tests
+      run: |
+        cd "${{ matrix.project-dir }}"
+        if pip show pytest > /dev/null; then
+          pytest
+        else
+          echo "No pytest found, checking code syntax."
+          python -m compileall .
+        fi
